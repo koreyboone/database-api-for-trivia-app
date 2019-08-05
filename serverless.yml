@@ -1,0 +1,81 @@
+service: trivia-service
+tenant: koreyboone #If you have an account @ https://www.serverless.com ensure you replace this with you tenant name
+app: compozed-trivia
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  region: us-east-2
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+functions:
+  create:
+    handler: players/create.create
+    events:
+      - http:
+          path: players
+          method: post
+          cors: true
+
+  list:
+    handler: players/list.list
+    events:
+      - http:
+          path: players
+          method: get
+          cors: true
+
+  get:
+    handler: players/get.get
+    events:
+      - http:
+          path: players/{id}
+          method: get
+          cors: true
+
+  update:
+    handler: players/update.update
+    events:
+      - http:
+          path: players/{id}
+          method: put
+          cors: true
+
+  delete:
+    handler: players/delete.delete
+    events:
+      - http:
+          path: players/{id}
+          method: delete
+          cors: true
+
+resources:
+  Resources:
+    playersDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
